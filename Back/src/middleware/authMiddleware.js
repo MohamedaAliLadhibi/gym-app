@@ -1,8 +1,17 @@
-const authMiddleware = (req, res, next) => {
-  // For testing, allow all requests
-  // In production, you'll check JWT tokens here
-  req.user = { id: 'test-user-id' };
-  next();
-};
+const jwt = require('jsonwebtoken');
 
-module.exports = authMiddleware;
+exports.authenticate = (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { id: decoded.userId };
+    next();
+  } catch (err) {
+    res.status(401).json({ message: 'Invalid token' });
+  }
+};
