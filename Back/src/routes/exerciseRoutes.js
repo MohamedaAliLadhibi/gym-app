@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const exerciseController = require('../controllers/exerciseController');
 
-// Public routes
-router.get('/', exerciseController.getAllExercises);
-router.get('/categories', exerciseController.getExerciseCategories);
-router.get('/search', exerciseController.searchExercises);
-router.get('/:id', exerciseController.getExerciseById);
+// Public routes (no auth for now)
+router.get('/', exerciseController.getAll);
+router.get('/:id', exerciseController.getOne);
+router.post('/', exerciseController.create);
+router.put('/:id', exerciseController.update);
+router.delete('/:id', exerciseController.delete);
 
 module.exports = router;
