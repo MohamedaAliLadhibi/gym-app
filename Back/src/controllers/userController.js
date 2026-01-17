@@ -1,23 +1,33 @@
+
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
 
-// Create Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('❌ Missing Supabase environment variables');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 // Get all users
 exports.getAllUsers = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('*');
+      .select(`
+        *,
+        membership_types:membership_type_id (name, description, features)
+      `)
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
     
     res.json(data || []);
   } catch (err) {
+    console.error('Get all users error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -29,7 +39,10 @@ exports.getUser = async (req, res) => {
     
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select(`
+        *,
+        membership_types:membership_type_id (name, description, features)
+      `)
       .eq('id', id)
       .single();
     
@@ -37,46 +50,129 @@ exports.getUser = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    res.json(data);
+    // Remove password from response
+    const { password_hash, ...userWithoutPassword } = data;
+    
+    res.json(userWithoutPassword);
   } catch (err) {
+    console.error('Get user error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// Register user
+// Register user - UPDATED TO MATCH SCHEMA
 exports.register = async (req, res) => {
   try {
-    const { email, password, full_name, phone, gender } = req.body;
+    console.log('Registration request body:', req.body);
+    
+    // Extract ALL fields from schema
+    const { 
+      email, 
+      password, 
+      full_name, 
+      phone, 
+      gender,
+      birth_date,
+      height,
+      weight,
+      description,
+      avatar_url,
+      role,
+      membership_type_id
+    } = req.body;
+    
+    // Validate required fields
+    if (!email || !password || !full_name) {
+      return res.status(400).json({ 
+        error: "Missing required fields",
+        required: ["email", "password", "full_name"],
+        received: req.body
+      });
+    }
     
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Get free membership
-    const { data: membership } = await supabase
-      .from('membership_types')
-      .select('id')
-      .eq('name', 'free')
-      .single();
+    // Determine membership type
+    let finalMembershipId = membership_type_id;
     
-    // Create user
+    if (!finalMembershipId) {
+      // Default to free membership
+      const { data: membership, error: membershipError } = await supabase
+        .from('membership_types')
+        .select('id')
+        .eq('name', 'free')
+        .single();
+      
+      if (membershipError || !membership) {
+        return res.status(500).json({ 
+          error: 'Could not find free membership type. Please create membership types first.' 
+        });
+      }
+      finalMembershipId = membership.id;
+    }
+    
+    // Create user with ALL schema columns
+    const userData = {
+      email,
+      password_hash: hashedPassword,
+      full_name,
+      phone: phone || null,
+      gender: gender || null,
+      birth_date: birth_date || null,
+      height: height ? parseFloat(height) : null,
+      weight: weight ? parseFloat(weight) : null,
+      description: description || null,
+      avatar_url: avatar_url || null,
+      role: role || 'user',  // Default to 'user' if not specified
+      membership_type_id: finalMembershipId
+    };
+    
+    console.log('Inserting user data:', userData);
+    
     const { data, error } = await supabase
       .from('users')
-      .insert([{
-        email,
-        password_hash: hashedPassword,
+      .insert([userData])
+      .select(`
+        id,
         full_name,
+        email,
         phone,
         gender,
-        membership_type_id: membership?.id
-      }])
-      .select()
+        birth_date,
+        height,
+        weight,
+        description,
+        avatar_url,
+        role,
+        membership_type_id,
+        created_at,
+        updated_at
+      `)
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error:', error);
+      return res.status(400).json({ 
+        error: "Failed to create user", 
+        details: error.message,
+        hint: error.hint || ''
+      });
+    }
     
-    res.status(201).json(data);
+    console.log('User created successfully:', data);
+    
+    res.status(201).json({
+      message: "User registered successfully",
+      user: data
+    });
+    
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Registration error:", err);
+    res.status(500).json({ 
+      error: "Internal server error", 
+      details: err.message 
+    });
   }
 };
 
@@ -85,10 +181,19 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Find user
+    if (!email || !password) {
+      return res.status(400).json({ 
+        error: 'Email and password are required' 
+      });
+    }
+    
+    // Find user with membership info
     const { data: user, error } = await supabase
       .from('users')
-      .select('*')
+      .select(`
+        *,
+        membership_types:membership_type_id (name, description, features)
+      `)
       .eq('email', email)
       .single();
     
@@ -105,17 +210,24 @@ exports.login = async (req, res) => {
     // Remove password from response
     const { password_hash, ...userWithoutPassword } = user;
     
-    res.json(userWithoutPassword);
+    res.json({
+      message: "Login successful",
+      user: userWithoutPassword
+    });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// Update user
+// Update user - UPDATED TO MATCH SCHEMA
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    
+    console.log('Update request for user:', id);
+    console.log('Update data:', updates);
     
     // If password is being updated, hash it
     if (updates.password) {
@@ -123,19 +235,49 @@ exports.updateUser = async (req, res) => {
       delete updates.password;
     }
     
+    // Convert numeric fields
+    if (updates.height) updates.height = parseFloat(updates.height);
+    if (updates.weight) updates.weight = parseFloat(updates.weight);
+    
+    // Add updated_at timestamp
+    updates.updated_at = new Date().toISOString();
+    
     const { data, error } = await supabase
       .from('users')
       .update(updates)
       .eq('id', id)
-      .select()
+      .select(`
+        id,
+        full_name,
+        email,
+        phone,
+        gender,
+        birth_date,
+        height,
+        weight,
+        description,
+        avatar_url,
+        role,
+        membership_type_id,
+        created_at,
+        updated_at
+      `)
       .single();
     
     if (error) {
-      return res.status(404).json({ error: 'User not found' });
+      console.error('Update error:', error);
+      return res.status(404).json({ 
+        error: 'User not found or update failed',
+        details: error.message 
+      });
     }
     
-    res.json(data);
+    res.json({
+      message: "User updated successfully",
+      user: data
+    });
   } catch (err) {
+    console.error('Update user error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -145,6 +287,17 @@ exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     
+    // First check if user exists
+    const { data: user, error: findError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', id)
+      .single();
+    
+    if (findError || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
     const { error } = await supabase
       .from('users')
       .delete()
@@ -152,8 +305,44 @@ exports.deleteUser = async (req, res) => {
     
     if (error) throw error;
     
-    res.json({ message: 'User deleted successfully' });
+    res.json({ 
+      message: 'User deleted successfully',
+      deletedUserId: id 
+    });
   } catch (err) {
+    console.error('Delete user error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get user profile (with related data)
+exports.getUserProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get user with membership and stats
+    const { data: user, error } = await supabase
+      .from('users')
+      .select(`
+        *,
+        membership_types:membership_type_id (*),
+        workouts:workouts(count),
+        goals:goals(count),
+        user_progress:user_progress(count)
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (error || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Remove password from response
+    const { password_hash, ...userWithoutPassword } = user;
+    
+    res.json(userWithoutPassword);
+  } catch (err) {
+    console.error('Get profile error:', err);
     res.status(500).json({ error: err.message });
   }
 };
