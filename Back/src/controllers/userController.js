@@ -1,6 +1,6 @@
-
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -10,7 +10,6 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-
 
 // Get all users
 exports.getAllUsers = async (req, res) => {
@@ -162,8 +161,28 @@ exports.register = async (req, res) => {
     
     console.log('User created successfully:', data);
     
+    // Generate JWT token for auto-login after registration
+    const token = jwt.sign(
+      { 
+        userId: data.id, 
+        email: data.email,
+        role: data.role 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    // Generate refresh token
+    const refreshToken = jwt.sign(
+      { userId: data.id },
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh',
+      { expiresIn: '7d' }
+    );
+    
     res.status(201).json({
       message: "User registered successfully",
+      token: token,
+      refreshToken: refreshToken,
       user: data
     });
     
@@ -176,7 +195,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// Login user
+// Login user - UPDATED WITH JWT TOKENS
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -188,18 +207,25 @@ exports.login = async (req, res) => {
     }
     
     // Find user with membership info
-    const { data: user, error } = await supabase
+    const { data: users, error } = await supabase
       .from('users')
       .select(`
         *,
         membership_types:membership_type_id (name, description, features)
       `)
-      .eq('email', email)
-      .single();
+      .eq('email', email);
     
-    if (error || !user) {
+    if (error) {
+      console.error('Supabase query error:', error);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Check if user exists
+    if (!users || users.length === 0) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
+    
+    const user = users[0];
     
     // Check password
     const validPassword = await bcrypt.compare(password, user.password_hash);
@@ -207,15 +233,95 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
     
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email,
+        role: user.role 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    // Generate refresh token
+    const refreshToken = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh',
+      { expiresIn: '7d' }
+    );
+    
     // Remove password from response
     const { password_hash, ...userWithoutPassword } = user;
     
     res.json({
       message: "Login successful",
+      token: token,
+      refreshToken: refreshToken,
       user: userWithoutPassword
     });
   } catch (err) {
     console.error('Login error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Refresh token
+exports.refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token required' });
+    }
+    
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh');
+    
+    // Get user data
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, role')
+      .eq('id', decoded.userId)
+      .single();
+    
+    if (error || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Generate new tokens
+    const newToken = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email,
+        role: user.role 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    const newRefreshToken = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh',
+      { expiresIn: '7d' }
+    );
+    
+    res.json({
+      message: "Token refreshed successfully",
+      token: newToken,
+      refreshToken: newRefreshToken
+    });
+  } catch (err) {
+    console.error('Refresh token error:', err);
+    
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Refresh token expired' });
+    }
+    
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Invalid refresh token' });
+    }
+    
     res.status(500).json({ error: err.message });
   }
 };
@@ -343,6 +449,38 @@ exports.getUserProfile = async (req, res) => {
     res.json(userWithoutPassword);
   } catch (err) {
     console.error('Get profile error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get current user (for authenticated requests)
+exports.getCurrentUser = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const { data: user, error } = await supabase
+      .from('users')
+      .select(`
+        *,
+        membership_types:membership_type_id (name, description, features)
+      `)
+      .eq('id', userId)
+      .single();
+    
+    if (error || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Remove password from response
+    const { password_hash, ...userWithoutPassword } = user;
+    
+    res.json(userWithoutPassword);
+  } catch (err) {
+    console.error('Get current user error:', err);
     res.status(500).json({ error: err.message });
   }
 };
