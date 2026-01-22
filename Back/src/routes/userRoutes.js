@@ -20,4 +20,7 @@ router.put('/:id', userController.updateUser);
 // DELETE /api/users/:id - Delete user
 router.delete('/:id', userController.deleteUser);
 
+// POST /api/users/refresh-token - Refresh JWT token
+router.post('/refresh-token', userController.refreshToken);
+
 module.exports = router;
