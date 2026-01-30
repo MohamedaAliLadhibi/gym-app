@@ -84,8 +84,10 @@ export default function WorkoutsScreen() {
   const renderWorkoutItem = ({ item }) => (
     <TouchableOpacity
       style={styles.workoutCard}
-      onPress={() => router.push(`/workout-detail/${item.id}`)}
-    >
+onPress={() => router.push({
+  pathname: '/(tabs)/workouts',
+  params: { workoutId: item.id }
+})}    >
       <LinearGradient
         colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
         style={styles.workoutCardContent}
@@ -263,7 +265,7 @@ export default function WorkoutsScreen() {
               <TouchableOpacity
                 key={plan.id}
                 style={styles.planCard}
-                onPress={() => router.push(`/workout-plan/${plan.id}`)}
+onPress={() => console.log('Navigate to plan:', plan.id)}
               >
                 <LinearGradient
                   colors={[plan.color, `${plan.color}CC`]}
