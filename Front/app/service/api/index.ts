@@ -2,7 +2,6 @@
 export { authAPI } from './auth';
 export { userAPI } from './user';
 export { workoutsAPI } from './workouts';
-export { nutritionAPI } from './nutrition';
 export { calendarAPI } from './calendar';
 
 // Export apiClient
