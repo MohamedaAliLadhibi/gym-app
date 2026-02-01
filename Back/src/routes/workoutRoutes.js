@@ -17,29 +17,16 @@ router.get('/',
   workoutController.getUserWorkouts
 );
 
-router.get('/calendar',
-  workoutController.getWorkoutCalendar
-);
-
-router.get('/recent',
-  workoutController.getRecentWorkouts
-);
-
 router.get('/:id',
   workoutController.getWorkoutById
 );
 
 router.put('/:id',
-  validationMiddleware.validateWorkoutUpdate,
   workoutController.updateWorkout
 );
 
 router.delete('/:id',
   workoutController.deleteWorkout
-);
-
-router.post('/:id/duplicate',
-  workoutController.duplicateWorkout
 );
 
 // Workout templates

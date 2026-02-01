@@ -22,37 +22,15 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API is working!' });
 });
 
-// Import routes with error handling
-const loadRoute = (path, routeName) => {
-  try {
-    const route = require(path);
-    return route;
-  } catch (error) {
-    console.log(`⚠️  ${routeName} routes not loaded:`, error.message);
-    return null;
-  }
-};
+// Import routes (DIRECTLY — no loader)
+const userRoutes = require('./src/routes/userRoutes');
+const exerciseRoutes = require('./src/routes/exerciseRoutes');
+const membershipRoutes = require('./src/routes/membershipRoutes');
 
-// Load routes
-const userRoutes = loadRoute('./src/routes/userRoutes', 'User');
-const exerciseRoutes = loadRoute('./src/routes/exerciseRoutes', 'Exercise');
-const membershipRoutes = loadRoute('./src/routes/membershipRoutes', 'Membership');
-
-// Use routes if they loaded successfully
-if (userRoutes) {
-  app.use('/api/users', userRoutes);
-  console.log('✅ User routes loaded');
-}
-
-if (exerciseRoutes) {
-  app.use('/api/exercises', exerciseRoutes);
-  console.log('✅ Exercise routes loaded');
-}
-
-if (membershipRoutes) {
-  app.use('/api/memberships', membershipRoutes);
-  console.log('✅ Membership routes loaded');
-}
+// Use routes
+app.use('/api/users', userRoutes);
+app.use('/api/exercises', exerciseRoutes);
+app.use('/api/memberships', membershipRoutes);
 
 // API Documentation
 app.get('/api', (req, res) => {
@@ -66,8 +44,8 @@ app.get('/api', (req, res) => {
   });
 });
 
-// 404 handler - FIXED: Use a function for wildcard route
-app.use((req, res, next) => {
+// 404 handler
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     error: 'Route not found',
