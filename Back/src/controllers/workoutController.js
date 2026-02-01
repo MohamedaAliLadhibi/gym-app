@@ -1,22 +1,9 @@
 const supabaseService = require('../services/supabaseService');
-const { validationResult } = require('express-validator');
 
 const workoutController = {
-  // Create workout
   createWorkout: async (req, res) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          errors: errors.array()
-        });
-      }
-
-      const workoutData = {
-        ...req.body,
-        user_id: req.user.id
-      };
+      const workoutData = req.body;
 
       const workout = await supabaseService.createWorkout(workoutData);
       
@@ -27,6 +14,7 @@ const workoutController = {
       });
 
     } catch (error) {
+      console.error('❌ Create workout error:', error);
       res.status(400).json({
         success: false,
         error: error.message
@@ -34,17 +22,15 @@ const workoutController = {
     }
   },
 
-  // Get user workouts
   getUserWorkouts: async (req, res) => {
     try {
-      const userId = req.user.id;
       const { startDate, endDate, page = 1, limit = 20 } = req.query;
       
-      const workouts = await supabaseService.getUserWorkouts(userId, {
+      const workouts = await supabaseService.getUserWorkouts(null, {
         startDate,
         endDate,
-        page,
-        limit
+        page: parseInt(page),
+        limit: parseInt(limit)
       });
       
       res.json({
@@ -53,6 +39,7 @@ const workoutController = {
       });
 
     } catch (error) {
+      console.error('❌ Get workouts error:', error);
       res.status(500).json({
         success: false,
         error: error.message
@@ -60,13 +47,11 @@ const workoutController = {
     }
   },
 
-  // Get workout by ID
   getWorkoutById: async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
       
-      const workout = await supabaseService.getWorkoutById(id, userId);
+      const workout = await supabaseService.getWorkoutById(id);
       
       res.json({
         success: true,
@@ -74,6 +59,7 @@ const workoutController = {
       });
 
     } catch (error) {
+      console.error('❌ Get workout error:', error);
       res.status(404).json({
         success: false,
         error: error.message
@@ -81,14 +67,12 @@ const workoutController = {
     }
   },
 
-  // Update workout
   updateWorkout: async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
       const updates = req.body;
       
-      const workout = await supabaseService.updateWorkout(id, userId, updates);
+      const workout = await supabaseService.updateWorkout(id, null, updates);
       
       res.json({
         success: true,
@@ -97,6 +81,7 @@ const workoutController = {
       });
 
     } catch (error) {
+      console.error('❌ Update workout error:', error);
       res.status(400).json({
         success: false,
         error: error.message
@@ -104,13 +89,11 @@ const workoutController = {
     }
   },
 
-  // Delete workout
   deleteWorkout: async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
       
-      await supabaseService.deleteWorkout(id, userId);
+      await supabaseService.deleteWorkout(id, null);
       
       res.json({
         success: true,
@@ -118,6 +101,7 @@ const workoutController = {
       });
 
     } catch (error) {
+      console.error('❌ Delete workout error:', error);
       res.status(400).json({
         success: false,
         error: error.message
@@ -125,13 +109,11 @@ const workoutController = {
     }
   },
 
-  // Get workout statistics
   getWorkoutStatistics: async (req, res) => {
     try {
-      const userId = req.user.id;
       const { period = 'month' } = req.query;
       
-      const stats = await supabaseService.getWorkoutStatistics(userId, period);
+      const stats = await supabaseService.getWorkoutStatistics(null, period);
       
       res.json({
         success: true,
@@ -139,6 +121,48 @@ const workoutController = {
       });
 
     } catch (error) {
+      console.error('❌ Get workout statistics error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  },
+
+  getFeaturedWorkouts: async (req, res) => {
+    try {
+      const featuredWorkouts = await supabaseService.getFeaturedWorkouts(null);
+      
+      res.json({
+        success: true,
+        data: featuredWorkouts
+      });
+
+    } catch (error) {
+      console.error('❌ Get featured workouts error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  },
+
+  getWorkoutHistory: async (req, res) => {
+    try {
+      const { page = 1, limit = 5 } = req.query;
+      
+      const history = await supabaseService.getWorkoutHistory(null, {
+        page: parseInt(page),
+        limit: parseInt(limit)
+      });
+      
+      res.json({
+        success: true,
+        data: history
+      });
+
+    } catch (error) {
+      console.error('❌ Get workout history error:', error);
       res.status(500).json({
         success: false,
         error: error.message

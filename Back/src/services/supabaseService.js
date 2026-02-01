@@ -2,21 +2,26 @@ const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase environment variables.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  },
+  db: {
+    schema: 'public'
+  }
+});
+
 class SupabaseService {
   constructor() {
-    this.client = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        db: {
-          schema: 'public'
-        }
-      }
-    );
+    this.client = supabase;
   }
 
   // User methods
@@ -70,7 +75,6 @@ class SupabaseService {
       .from('exercises')
       .select('*', { count: 'exact' });
 
-    // Apply filters
     Object.keys(filters).forEach(key => {
       if (filters[key] && key !== 'page' && key !== 'limit' && key !== 'search') {
         query = query.eq(key, filters[key]);
@@ -81,7 +85,6 @@ class SupabaseService {
       query = query.ilike('name', `%${filters.search}%`);
     }
 
-    // Pagination
     const page = filters.page || 1;
     const limit = filters.limit || 20;
     const from = (page - 1) * limit;
@@ -108,7 +111,6 @@ class SupabaseService {
   async createWorkout(workoutData) {
     const { exercises, ...workout } = workoutData;
 
-    // Start transaction
     const { data: newWorkout, error: workoutError } = await this.client
       .from('workouts')
       .insert([workout])
@@ -117,7 +119,6 @@ class SupabaseService {
 
     if (workoutError) throw workoutError;
 
-    // Add exercises if provided
     if (exercises && exercises.length > 0) {
       const workoutExercises = exercises.map((ex, index) => ({
         workout_id: newWorkout.id,
@@ -171,8 +172,6 @@ class SupabaseService {
   }
 
   async getUserDashboard(userId) {
-    // Implementation for dashboard data
-    // This would combine multiple queries
     return {
       user: await this.getUserById(userId),
       recentWorkouts: await this.getRecentWorkouts(userId),

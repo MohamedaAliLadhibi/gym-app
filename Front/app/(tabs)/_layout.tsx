@@ -1,7 +1,8 @@
 // app/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text } from 'react-native';
+import { View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // import { useAuth } from '../../context/AuthContext';
 
 const COLORS = {
@@ -14,6 +15,14 @@ const COLORS = {
 
 export default function TabsLayout() {
   // const { user } = useAuth();
+  
+  // Get safe area insets for devices with notches/gesture bars
+  const insets = useSafeAreaInsets();
+  
+  // Calculate extra bottom padding for Android devices (especially Xiaomi/Redmi)
+  const bottomPadding = Platform.OS === 'android' 
+    ? Math.max(insets.bottom, 20) // At least 20px on Android
+    : insets.bottom;
 
   return (
     <Tabs
@@ -22,9 +31,10 @@ export default function TabsLayout() {
           backgroundColor: COLORS.dark,
           borderTopColor: 'rgba(124, 58, 237, 0.2)',
           borderTopWidth: 1,
-          height: 70,
-          paddingBottom: 10,
+          height: 70 + bottomPadding, // Add extra height for padding
+          paddingBottom: 10 + bottomPadding, // Extra padding at bottom
           paddingTop: 10,
+          paddingHorizontal: 5,
         },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.gray,
@@ -35,8 +45,13 @@ export default function TabsLayout() {
           fontWeight: '600',
           marginTop: 4,
         },
+        // Additional safety for tab buttons
+        tabBarItemStyle: {
+          marginBottom: Platform.OS === 'android' ? 5 : 0,
+        },
       }}
     >
+      {/* Rest of your Tabs.Screen components remain the same */}
       <Tabs.Screen
         name="home"
         options={{
@@ -102,7 +117,7 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
-        name="profile"
+        name="profil"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size, focused }) => (
