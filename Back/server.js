@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
+console.log("SUPABASE_KEY:", process.env.SUPABASE_KEY ? "LOADED" : "MISSING");
+
 
 const app = express();
 
@@ -26,11 +29,14 @@ app.get('/api/test', (req, res) => {
 const userRoutes = require('./src/routes/userRoutes');
 const exerciseRoutes = require('./src/routes/exerciseRoutes');
 const membershipRoutes = require('./src/routes/membershipRoutes');
+const wourkoutRoutes = require('./src/routes/workoutRoutes');
 
 // Use routes
 app.use('/api/users', userRoutes);
 app.use('/api/exercises', exerciseRoutes);
 app.use('/api/memberships', membershipRoutes);
+app.use('/api/workouts', wourkoutRoutes);
+
 
 // API Documentation
 app.get('/api', (req, res) => {
@@ -39,7 +45,8 @@ app.get('/api', (req, res) => {
     endpoints: {
       users: '/api/users',
       exercises: '/api/exercises',
-      memberships: '/api/memberships'
+      memberships: '/api/memberships',
+      workouts: '/api/workouts'
     }
   });
 });

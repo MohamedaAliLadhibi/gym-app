@@ -15,9 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { workoutsAPI, nutritionAPI } from '../service/api';
 import { useAuth } from '@/app/context/AuthContext'
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,10 +31,49 @@ const COLORS = {
   error: '#EF4444',
 };
 
+// TEMPORARY API MOCK - Replace with your actual API calls
+const mockAPI = {
+  workoutsAPI: {
+    getFeaturedWorkouts: async () => {
+      // Mock data - replace with actual API call
+      return [
+        {
+          id: '1',
+          title: 'Full Body Burn',
+          duration: 45,
+          caloriesBurned: 350,
+          difficulty: 'intermediate',
+          description: 'A complete full-body workout focusing on strength and endurance.'
+        }
+      ];
+    },
+    getWorkoutHistory: async () => {
+      // Mock data - replace with actual API call
+      return {
+        data: [
+          {
+            id: '1',
+            workout: { title: 'Morning Cardio' },
+            completedAt: new Date().toISOString(),
+            duration: 30,
+            caloriesBurned: 250
+          },
+          {
+            id: '2',
+            workout: { title: 'Strength Training' },
+            completedAt: new Date(Date.now() - 86400000).toISOString(), // yesterday
+            duration: 45,
+            caloriesBurned: 350
+          }
+        ]
+      };
+    }
+  }
+};
+
 export default function HomeScreen() {
-  const { user, updateProfile } = useAuth();
+  const { user } = useAuth();
   const [featuredWorkouts, setFeaturedWorkouts] = useState([]);
-  const [dailyNutrition, setDailyNutrition] = useState(null);
   const [workoutHistory, setWorkoutHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,17 +106,12 @@ export default function HomeScreen() {
     try {
       setLoading(true);
       
-      // Fetch featured workouts
-      const workouts = await workoutsAPI.getFeaturedWorkouts();
+      // Fetch featured workouts - using mock for now
+      const workouts = await mockAPI.workoutsAPI.getFeaturedWorkouts();
       setFeaturedWorkouts(workouts);
       
-      // Fetch daily nutrition
-      const today = new Date().toISOString().split('T')[0];
-      const nutrition = await nutritionAPI.getDailyNutrition(today);
-      setDailyNutrition(nutrition);
-      
-      // Fetch workout history (last 5 workouts)
-      const history = await workoutsAPI.getWorkoutHistory(1, 5);
+      // Fetch workout history - using mock for now
+      const history = await mockAPI.workoutsAPI.getWorkoutHistory();
       setWorkoutHistory(history.data || []);
       
     } catch (error) {
@@ -97,14 +129,6 @@ export default function HomeScreen() {
 
   const handleStartWorkout = (workoutId) => {
     router.push(`/workout/${workoutId}`);
-  };
-
-  const handleViewNutrition = () => {
-    router.push('/(tabs)/nutrition');
-  };
-
-  const handleViewProfile = () => {
-    router.push('/(tabs)/profile');
   };
 
   const getGreeting = () => {
@@ -144,20 +168,20 @@ export default function HomeScreen() {
           <View style={styles.profileSection}>
             <TouchableOpacity 
               style={styles.avatarContainer}
-              onPress={handleViewProfile}
+              onPress={() => router.push('/(tabs)/profile')}
             >
               <LinearGradient
                 colors={[COLORS.primary, COLORS.secondary]}
                 style={styles.avatar}
               >
                 <Text style={styles.avatarText}>
-                  {user?.name?.charAt(0) || 'U'}
+                  {user?.full_name?.charAt(0) || user?.name?.charAt(0) || 'U'}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
             <View>
               <Text style={styles.greeting}>{getGreeting()},</Text>
-              <Text style={styles.userName}>{user?.name || 'Fitness Warrior'}!</Text>
+              <Text style={styles.userName}>{user?.full_name || user?.name || 'Fitness Warrior'}!</Text>
             </View>
           </View>
           <TouchableOpacity 
@@ -165,9 +189,6 @@ export default function HomeScreen() {
             onPress={() => router.push('/notifications')}
           >
             <Ionicons name="notifications-outline" size={24} color={COLORS.white} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.badgeText}>3</Text>
-            </View>
           </TouchableOpacity>
         </Animated.View>
 
@@ -186,11 +207,11 @@ export default function HomeScreen() {
               colors={[COLORS.primary, '#8B5CF6']}
               style={styles.statGradient}
             >
-              <Ionicons name="flame" size={24} color={COLORS.white} />
+              <Ionicons name="barbell" size={24} color={COLORS.white} />
               <Text style={styles.statNumber}>
-                {dailyNutrition?.totalCalories || 0}
+                {workoutHistory.length || 0}
               </Text>
-              <Text style={styles.statLabel}>Calories Today</Text>
+              <Text style={styles.statLabel}>Workouts This Week</Text>
             </LinearGradient>
           </View>
 
@@ -199,11 +220,11 @@ export default function HomeScreen() {
               colors={[COLORS.secondary, '#60A5FA']}
               style={styles.statGradient}
             >
-              <Ionicons name="barbell" size={24} color={COLORS.white} />
+              <Ionicons name="trophy" size={24} color={COLORS.white} />
               <Text style={styles.statNumber}>
-                {workoutHistory.length || 0}
+                {featuredWorkouts.length || 0}
               </Text>
-              <Text style={styles.statLabel}>Workouts This Week</Text>
+              <Text style={styles.statLabel}>Available Workouts</Text>
             </LinearGradient>
           </View>
         </Animated.View>
@@ -288,102 +309,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Nutrition Tracking */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Nutrition Today</Text>
-            <TouchableOpacity onPress={handleViewNutrition}>
-              <Text style={styles.seeAllText}>Details →</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Animated.View
-            style={[
-              styles.nutritionCard,
-              {
-                opacity: fadeAnim,
-              }
-            ]}
-          >
-            <View style={styles.nutritionHeader}>
-              <View>
-                <Text style={styles.nutritionTitle}>Macros Progress</Text>
-                <Text style={styles.nutritionSubtitle}>
-                  {dailyNutrition ? `${Math.round((dailyNutrition.totalCalories / dailyNutrition.goals.calories) * 100)}% of goal` : 'Track your meals'}
-                </Text>
-              </View>
-              <TouchableOpacity 
-                style={styles.addMealButton}
-                onPress={() => router.push('/log-meal')}
-              >
-                <Ionicons name="add" size={20} color={COLORS.white} />
-              </TouchableOpacity>
-            </View>
-
-            {dailyNutrition ? (
-              <View style={styles.macrosContainer}>
-                {[
-                  {
-                    label: 'Protein',
-                    value: dailyNutrition.totalProtein,
-                    goal: dailyNutrition.goals.protein,
-                    color: COLORS.primary,
-                    unit: 'g'
-                  },
-                  {
-                    label: 'Carbs',
-                    value: dailyNutrition.totalCarbs,
-                    goal: dailyNutrition.goals.carbs,
-                    color: COLORS.secondary,
-                    unit: 'g'
-                  },
-                  {
-                    label: 'Fat',
-                    value: dailyNutrition.totalFat,
-                    goal: dailyNutrition.goals.fat,
-                    color: COLORS.accent,
-                    unit: 'g'
-                  },
-                ].map((macro, index) => (
-                  <View key={index} style={styles.macroItem}>
-                    <View style={styles.macroHeader}>
-                      <View style={[styles.macroDot, { backgroundColor: macro.color }]} />
-                      <Text style={styles.macroLabel}>{macro.label}</Text>
-                      <Text style={styles.macroValue}>
-                        {macro.value}/{macro.goal}{macro.unit}
-                      </Text>
-                    </View>
-                    <View style={styles.progressBar}>
-                      <View 
-                        style={[
-                          styles.progressFill,
-                          { 
-                            width: `${Math.min(100, (macro.value / macro.goal) * 100)}%`,
-                            backgroundColor: macro.color 
-                          }
-                        ]}
-                      />
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyNutrition}>
-                <Ionicons name="restaurant-outline" size={40} color={COLORS.gray} />
-                <Text style={styles.emptyNutritionText}>
-                  No meals logged today
-                </Text>
-                <TouchableOpacity
-                  style={styles.logMealButton}
-                  onPress={() => router.push('/log-meal')}
-                >
-                  <Text style={styles.logMealButtonText}>Log Your First Meal</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </Animated.View>
-        </View>
-
         {/* Recent Activity */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -450,22 +375,22 @@ export default function HomeScreen() {
                 onPress: () => router.push('/(tabs)/workouts'),
               },
               {
-                title: 'Log Meal',
-                icon: 'restaurant',
-                color: COLORS.success,
-                onPress: () => router.push('/log-meal'),
-              },
-              {
-                title: 'Track Weight',
-                icon: 'scale',
-                color: COLORS.warning,
-                onPress: () => router.push('/track-weight'),
-              },
-              {
-                title: 'Schedule',
+                title: 'Calendar',
                 icon: 'calendar',
                 color: COLORS.secondary,
                 onPress: () => router.push('/(tabs)/calendar'),
+              },
+              {
+                title: 'Exercises',
+                icon: 'fitness',
+                color: COLORS.success,
+                onPress: () => router.push('/(tabs)/exercise'),
+              },
+              {
+                title: 'Profile',
+                icon: 'person',
+                color: COLORS.accent,
+                onPress: () => router.push('/(tabs)/profile'),
               },
             ].map((action, index) => (
               <Animated.View
@@ -506,6 +431,7 @@ export default function HomeScreen() {
   );
 }
 
+// Styles remain the same as before...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -560,22 +486,6 @@ const styles = StyleSheet.create({
   notificationButton: {
     position: 'relative',
     padding: 8,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: COLORS.error,
-    borderRadius: 10,
-    width: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: {
-    color: COLORS.white,
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -710,93 +620,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   browseButtonText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  nutritionCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 20,
-  },
-  nutritionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  nutritionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.white,
-  },
-  nutritionSubtitle: {
-    fontSize: 14,
-    color: COLORS.gray,
-    marginTop: 4,
-  },
-  addMealButton: {
-    backgroundColor: COLORS.primary,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  macrosContainer: {
-    gap: 16,
-  },
-  macroItem: {
-    gap: 8,
-  },
-  macroHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  macroDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  macroLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.white,
-    fontWeight: '500',
-  },
-  macroValue: {
-    fontSize: 14,
-    color: COLORS.gray,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  emptyNutrition: {
-    padding: 30,
-    alignItems: 'center',
-  },
-  emptyNutritionText: {
-    color: COLORS.gray,
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  logMealButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  logMealButtonText: {
     color: COLORS.white,
     fontSize: 14,
     fontWeight: '600',
