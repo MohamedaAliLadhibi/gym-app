@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,39 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Animated,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Palette } from '../../constants/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideUpAnim = useRef(new Animated.Value(24)).current;
+
   const { login } = useAuth();
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideUpAnim, {
+        toValue: 0,
+        friction: 10,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -56,7 +77,7 @@ export default function LoginScreen() {
       console.error('Login error:', error);
       
       // Show user-friendly error message
-      let errorMessage = 'Login failed. Please try again.';
+      let errorMessage = 'Login failed.  Please try again.';
       
       if (error.response) {
         // Backend returned an error response
@@ -87,16 +108,55 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        <StatusBar style="dark" />
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to your account</Text>
-        </View>
+        <StatusBar style="light" />
+
+        {/* Hero / Branding */}
+        <LinearGradient
+          colors={[Palette.black, Palette.gray700]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View style={styles.logoContainer}>
+            <LinearGradient
+              colors={[Palette.orange, Palette.orangeDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logo}
+            >
+              <Text style={styles.logoText}>GYM</Text>
+            </LinearGradient>
+            <View>
+              <Text style={styles.brandTitle}>Welcome back</Text>
+              <Text style={styles.brandSubtitle}>Log in to continue your journey</Text>
+            </View>
+          </View>
+
+          <View style={styles.heroBadges}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeDot} />
+              <Text style={styles.badgeText}>Personalized plans</Text>
+            </View>
+            <View style={styles.badge}>
+              <Text style={styles.badgeDot} />
+              <Text style={styles.badgeText}>Track progress</Text>
+            </View>
+          </View>
+        </LinearGradient>
 
         {/* Form */}
-        <View style={styles.form}>
+        <Animated.View
+          style={[
+            styles.formCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideUpAnim }],
+            },
+          ]}
+        >
+          <Text style={styles.cardTitle}>Sign in</Text>
+          <Text style={styles.cardSubtitle}>Use your email and password</Text>
+
           {/* Email Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
@@ -139,11 +199,19 @@ export default function LoginScreen() {
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.buttonDisabled]}
             onPress={handleLogin}
+            activeOpacity={0.8}
             disabled={loading}
           >
-            <Text style={styles.loginButtonText}>
-              {loading ? 'Signing In...' : 'Sign In'}
-            </Text>
+            <LinearGradient
+              colors={[Palette.orange, Palette.orangeDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.loginButtonGradient}
+            >
+              <Text style={styles.loginButtonText}>
+                {loading ? 'Signing In...' : 'Sign In'}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Divider */}
@@ -191,7 +259,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </Link>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -200,30 +268,96 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Palette.black,
   },
   scrollContainer: {
     flexGrow: 1,
+    paddingBottom: 40,
+  },
+  hero: {
+    paddingTop: 40,
+    paddingBottom: 32,
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
-  header: {
+  logoContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 40,
-    marginTop: 20,
+    marginBottom: 24,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 8,
+  logo: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
+  logoText: {
+    color: Palette.white,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
-  form: {
-    flex: 1,
+  brandTitle: {
+    color: Palette.white,
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  brandSubtitle: {
+    color: Palette.gray300,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  heroBadges: {
+    flexDirection: 'row',
+    marginTop: 8,
+    columnGap: 12,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15,23,42,0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(249,115,22,0.3)',
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Palette.orange,
+    marginRight: 6,
+  },
+  badgeText: {
+    color: Palette.gray100,
+    fontSize: 12,
+  },
+  formCard: {
+    marginTop: -16,
+    marginHorizontal: 16,
+    padding: 20,
+    borderRadius: 24,
+    backgroundColor: Palette.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  cardTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 24,
   },
   inputContainer: {
     marginBottom: 20,
@@ -236,18 +370,18 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#F9FAFB',
   },
   inputError: {
-    borderColor: '#ff3b30',
+    borderColor: '#EF4444',
   },
   errorText: {
-    color: '#ff3b30',
+    color: '#EF4444',
     fontSize: 12,
     marginTop: 4,
   },
@@ -256,19 +390,25 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   forgotPasswordText: {
-    color: '#007AFF',
+    color: Palette.orangeDark,
     fontSize: 14,
   },
   loginButton: {
-    backgroundColor: '#007AFF',
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 0,
     alignItems: 'center',
     marginTop: 10,
     marginBottom: 24,
+    overflow: 'hidden',
+  },
+  loginButtonGradient: {
+    width: '100%',
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.7,
   },
   loginButtonText: {
     color: '#fff',
@@ -283,11 +423,11 @@ const styles = StyleSheet.create({
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#E5E7EB',
   },
   dividerText: {
     marginHorizontal: 16,
-    color: '#666',
+    color: '#9CA3AF',
     fontSize: 14,
   },
   socialButtonsContainer: {
@@ -300,21 +440,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   googleButton: {
-    backgroundColor: '#fff',
-    borderColor: '#ddd',
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
   },
   appleButton: {
-    backgroundColor: '#000',
-    borderColor: '#000',
+    backgroundColor: '#111827',
+    borderColor: '#111827',
   },
   facebookButton: {
-    backgroundColor: '#1877F2',
-    borderColor: '#1877F2',
+    backgroundColor: '#111827',
+    borderColor: '#111827',
   },
   socialButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: '#111827',
   },
   appleButtonText: {
     color: '#fff',
@@ -326,11 +466,11 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   signupText: {
-    color: '#666',
+    color: '#6B7280',
     fontSize: 14,
   },
   signupLink: {
-    color: '#007AFF',
+    color: Palette.orangeDark,
     fontSize: 14,
     fontWeight: '600',
   },

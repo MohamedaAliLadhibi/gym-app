@@ -17,14 +17,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { workoutsAPI } from '../service/api';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Palette } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
 const COLORS = {
-  primary: '#7C3AED',
-  secondary: '#3B82F6',
-  dark: '#0F172A',
-  white: '#FFFFFF',
-  gray: '#64748B',
+  primary: Palette.orange,
+  secondary: Palette.orangeDark,
+  dark: Palette.black,
+  white: Palette.white,
+  gray: Palette.gray500,
 };
 
 export default function WorkoutsScreen() {
@@ -40,6 +41,8 @@ export default function WorkoutsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
 
   useEffect(() => {
     fetchWorkouts();
@@ -49,8 +52,9 @@ export default function WorkoutsScreen() {
     try {
       setLoading(true);
       const filters = selectedCategory !== 'all' ? { category: selectedCategory } : undefined;
-      const response = await workoutsAPI.getWorkouts(1, 20, filters);
+      const response = await workoutsAPI.getWorkouts(1, 50, filters);
       setWorkouts(response.data);
+      setCurrentPage(1);
     } catch (error) {
       console.error('Error fetching workouts:', error);
     } finally {
@@ -130,6 +134,19 @@ onPress={() => router.push({
       </LinearGradient>
     </TouchableOpacity>
   );
+
+  const totalPages = Math.max(1, Math.ceil(workouts.length / pageSize));
+  const paginatedWorkouts = workouts.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  const handlePageChange = (direction: 'prev' | 'next') => {
+    setCurrentPage((prev) => {
+      if (direction === 'prev') return Math.max(1, prev - 1);
+      return Math.min(totalPages, prev + 1);
+    });
+  };
 
   if (loading && !refreshing) {
     return (
@@ -299,9 +316,9 @@ onPress={() => console.log('Navigate to plan:', plan.id)}
             <Text style={styles.workoutCount}>{workouts.length} workouts</Text>
           </View>
 
-          {workouts.length > 0 ? (
+          {paginatedWorkouts.length > 0 ? (
             <FlatList
-              data={workouts}
+              data={paginatedWorkouts}
               renderItem={renderWorkoutItem}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
@@ -314,6 +331,56 @@ onPress={() => console.log('Navigate to plan:', plan.id)}
               <Text style={styles.emptyStateText}>
                 {searchQuery ? 'Try a different search' : 'Workouts will appear here'}
               </Text>
+            </View>
+          )}
+          {workouts.length > 0 && (
+            <View style={styles.paginationContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.pageButton,
+                  currentPage === 1 && styles.pageButtonDisabled,
+                ]}
+                disabled={currentPage === 1}
+                onPress={() => handlePageChange('prev')}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={18}
+                  color={currentPage === 1 ? COLORS.gray : COLORS.white}
+                />
+              </TouchableOpacity>
+
+              <View style={styles.pageIndicators}>
+                {Array.from({ length: totalPages }).map((_, index) => {
+                  const page = index + 1;
+                  const isActive = page === currentPage;
+                  return (
+                    <TouchableOpacity
+                      key={page}
+                      style={[
+                        styles.pageDot,
+                        isActive && styles.pageDotActive,
+                      ]}
+                      onPress={() => setCurrentPage(page)}
+                    />
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.pageButton,
+                  currentPage === totalPages && styles.pageButtonDisabled,
+                ]}
+                disabled={currentPage === totalPages}
+                onPress={() => handlePageChange('next')}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={currentPage === totalPages ? COLORS.gray : COLORS.white}
+                />
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -558,5 +625,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.gray,
     textAlign: 'center',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  pageButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15,23,42,0.8)',
+  },
+  pageButtonDisabled: {
+    opacity: 0.5,
+  },
+  pageIndicators: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pageDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(148,163,184,0.6)',
+  },
+  pageDotActive: {
+    width: 18,
+    backgroundColor: COLORS.primary,
   },
 });

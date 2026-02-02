@@ -13,6 +13,8 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Palette } from '../../constants/theme';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -67,8 +69,8 @@ export default function ForgotPasswordScreen() {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        <StatusBar style="dark" />
-        
+        <StatusBar style="light" />
+
         {/* Back Button */}
         <TouchableOpacity
           style={styles.backButton}
@@ -79,15 +81,22 @@ export default function ForgotPasswordScreen() {
         </TouchableOpacity>
 
         {/* Header */}
-        <View style={styles.header}>
-          <Ionicons name="lock-closed" size={64} color="#007AFF" />
+        <LinearGradient
+          colors={[Palette.black, Palette.gray700]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <View style={styles.iconCircle}>
+            <Ionicons name="lock-closed" size={32} color={Palette.white} />
+          </View>
           <Text style={styles.title}>Forgot Password</Text>
           <Text style={styles.subtitle}>
             {emailSent
               ? 'Check your email for reset instructions'
               : "Enter your email and we'll send you a link to reset your password"}
           </Text>
-        </View>
+        </LinearGradient>
 
         {!emailSent ? (
           <View style={styles.form}>
@@ -158,7 +167,7 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Palette.black,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -172,25 +181,42 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
-    marginTop: 20,
+    marginBottom: 32,
+    marginTop: 8,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(15,23,42,0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(249,115,22,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: Palette.white,
     marginTop: 16,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#E5E7EB',
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 20,
   },
   form: {
     flex: 1,
+    backgroundColor: Palette.white,
+    borderRadius: 24,
+    padding: 20,
   },
   inputContainer: {
     marginBottom: 30,
@@ -203,23 +229,23 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#F9FAFB',
   },
   inputError: {
-    borderColor: '#ff3b30',
+    borderColor: '#EF4444',
   },
   errorText: {
-    color: '#ff3b30',
+    color: '#EF4444',
     fontSize: 12,
     marginTop: 4,
   },
   resetButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Palette.orange,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
