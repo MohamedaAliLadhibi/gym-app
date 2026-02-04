@@ -5,25 +5,51 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Global app palette
+// Primary colors requested: white, grey, orange & black (in that order)
+export const Palette = {
+  white: '#FFFFFF',
+  // Greys
+  gray50: '#F9FAFB',
+  gray100: '#F3F4F6',
+  gray200: '#E5E7EB',
+  gray300: '#D1D5DB',
+  gray500: '#6B7280',
+  gray700: '#374151',
+  // Accent orange
+  orange: '#F97316',
+  orangeDark: '#EA580C',
+  // Black
+  black: '#111827',
+};
+
+const tintColorLight = Palette.orange;
+const tintColorDark = Palette.orange;
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: Palette.black,
+    background: Palette.white,
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: Palette.gray500,
+    tabIconDefault: Palette.gray500,
     tabIconSelected: tintColorLight,
+    border: Palette.gray200,
+    mutedText: Palette.gray500,
+    card: Palette.white,
+    surface: Palette.gray50,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: Palette.white,
+    background: Palette.black,
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: Palette.gray300,
+    tabIconDefault: Palette.gray300,
     tabIconSelected: tintColorDark,
+    border: Palette.gray700,
+    mutedText: Palette.gray300,
+    card: '#020617',
+    surface: '#020617',
   },
 };
 

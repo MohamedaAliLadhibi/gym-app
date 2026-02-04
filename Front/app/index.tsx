@@ -14,17 +14,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
+import { Palette } from '../constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
 const COLORS = {
-  // Main theme colors
-  primary: '#7C3AED', // Purple
-  secondary: '#3B82F6', // Blue
-  accent: '#EC4899', // Pink
-  dark: '#0F172A', // Dark blue/black
-  light: '#F8FAFC', // Light gray
-  white: '#FFFFFF',
+  // Main theme colors aligned with global palette
+  primary: Palette.orange,
+  secondary: Palette.orangeDark,
+  accent: Palette.white,
+  dark: Palette.black,
+  light: Palette.gray50,
+  white: Palette.white,
   success: '#10B981',
   warning: '#F59E0B',
 };
@@ -119,7 +120,7 @@ export default function LandingScreen() {
     >
       {/* Hero Section */}
       <LinearGradient
-        colors={[COLORS.dark, '#1E293B']}
+        colors={[COLORS.dark, '#020617']}
         style={styles.heroSection}
       >
         <Animated.View 
@@ -144,12 +145,12 @@ export default function LandingScreen() {
             >
               <Text style={styles.logoText}>FIT</Text>
             </LinearGradient>
-            <Text style={styles.appName}>FitFlow</Text>
+            <Text style={styles.appName}>Fit Gym</Text>
           </View>
 
           <Text style={styles.heroTitle}>
             Transform Your Body, {'\n'}
-            <Text style={styles.heroTitleHighlight}>Transform Your Life</Text>
+            <Text style={styles.heroTitleHighlight}>Own Your Progress</Text>
           </Text>
           
           <Text style={styles.heroSubtitle}>
@@ -205,7 +206,7 @@ export default function LandingScreen() {
 
       {/* Features Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Why Choose FitFlow?</Text>
+        <Text style={styles.sectionTitle}>Why Choose Fit Gym?</Text>
         <Text style={styles.sectionSubtitle}>Everything you need to achieve your fitness goals</Text>
         
         <View style={styles.featuresGrid}>
