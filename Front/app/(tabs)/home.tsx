@@ -15,20 +15,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useAuth } from '@/app/context/AuthContext'
+import { useAuth } from '@/app/context/AuthContext';
+import { Palette } from '../../constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
 const COLORS = {
-  primary: '#7C3AED',
-  secondary: '#3B82F6',
-  accent: '#EC4899',
-  dark: '#0F172A',
-  light: '#F8FAFC',
-  white: '#FFFFFF',
-  success: '#10B981',
+  primary: Palette.orange,
+  secondary: Palette.orangeDark,
+  accent: Palette.white,
+  dark: Palette.black,
+  light: Palette.gray50,
+  white: Palette.white,
+  success: '#22C55E',
   warning: '#F59E0B',
   error: '#EF4444',
+  gray: Palette.gray500,
 };
 
 // TEMPORARY API MOCK - Replace with your actual API calls

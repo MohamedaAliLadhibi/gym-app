@@ -1,7 +1,6 @@
 // app/(auth)/signup.tsx
-import React, { useState } from 'react';
-import { authAPI } from '../service/api'; // Add this import
-import { Alert } from 'react-native'; // Add this import
+import React, { useState, useRef, useEffect } from 'react';
+import { authAPI } from '../service/api';
 import {
   View,
   Text,
@@ -11,10 +10,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  Animated,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Link, router } from 'expo-router';
 import Checkbox from 'expo-checkbox';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Palette } from '../../constants/theme';
 
 export default function SignupScreen() {
   const [formData, setFormData] = useState({
@@ -26,6 +29,24 @@ export default function SignupScreen() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideUpAnim = useRef(new Animated.Value(24)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideUpAnim, {
+        toValue: 0,
+        friction: 10,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -33,66 +54,55 @@ export default function SignupScreen() {
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     }
-    
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
-    
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
-    
     if (!formData.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-    
     if (!termsAccepted) {
       newErrors.terms = 'You must accept the terms and conditions';
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-const handleSignup = async () => {
-  if (!validateForm()) return;
-  
-  setLoading(true);
-  try {
-    // 👇 REAL API CALL - Using your local API
-    const response = await authAPI.register({
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-    });
-    
-    // Store the token and user data
-    // (Assuming your API returns token and user)
-    
-    // Navigate to home after successful signup
-    router.replace('/(tabs)');
-    
-  } catch (error: any) {
-    console.error('Signup error:', error);
-    
-    // Show appropriate error message
-    if (error.response?.status === 409) {
-      Alert.alert('Email Exists', 'An account with this email already exists.');
-    } else if (error.response?.status === 400) {
-      Alert.alert('Invalid Data', 'Please check your information.');
-    } else {
-      Alert.alert('Signup Failed', 'Unable to create account. Please try again.');
+  const handleSignup = async () => {
+    if (!validateForm()) return;
+    setLoading(true);
+    try {
+      const response = await authAPI.register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // Optionally store token/user from response here
+
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      console.error('Signup error:', error);
+
+      if (error.response?.status === 409) {
+        Alert.alert('Email Exists', 'An account with this email already exists.');
+      } else if (error.response?.status === 400) {
+        Alert.alert('Invalid Data', 'Please check your information.');
+      } else {
+        Alert.alert('Signup Failed', 'Unable to create account. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -116,16 +126,41 @@ const handleSignup = async () => {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        <StatusBar style="dark" />
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join our community</Text>
-        </View>
+        <StatusBar style="light" />
+
+        {/* Hero / Branding */}
+        <LinearGradient
+          colors={[Palette.black, Palette.gray700]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View style={styles.logoContainer}>
+            <LinearGradient
+              colors={[Palette.orange, Palette.orangeDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logo}
+            >
+              <Text style={styles.logoText}>GYM</Text>
+            </LinearGradient>
+            <View>
+              <Text style={styles.brandTitle}>Join Fit Gym</Text>
+              <Text style={styles.brandSubtitle}>Create your account in seconds</Text>
+            </View>
+          </View>
+        </LinearGradient>
 
         {/* Form */}
-        <View style={styles.form}>
+        <Animated.View
+          style={[
+            styles.formCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideUpAnim }],
+            },
+          ]}
+        >
           {/* Name Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Full Name</Text>
@@ -191,7 +226,7 @@ const handleSignup = async () => {
               style={styles.checkbox}
               value={termsAccepted}
               onValueChange={setTermsAccepted}
-              color={termsAccepted ? '#007AFF' : undefined}
+              color={termsAccepted ? Palette.orangeDark : undefined}
               disabled={loading}
             />
             <Text style={styles.termsText}>
@@ -207,10 +242,18 @@ const handleSignup = async () => {
             style={[styles.signupButton, loading && styles.buttonDisabled]}
             onPress={handleSignup}
             disabled={loading}
+            activeOpacity={0.8}
           >
-            <Text style={styles.signupButtonText}>
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </Text>
+            <LinearGradient
+              colors={[Palette.orange, Palette.orangeDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.signupButtonGradient}
+            >
+              <Text style={styles.signupButtonText}>
+                {loading ? 'Creating Account...' : 'Create Account'}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Divider */}
@@ -244,13 +287,13 @@ const handleSignup = async () => {
           {/* Login Link */}
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>
-               <Link href="/auth/login" asChild>
-              <TouchableOpacity>
+            <Link href="/auth/login" asChild>
+              <TouchableOpacity disabled={loading}>
                 <Text style={styles.loginLink}>Sign In</Text>
               </TouchableOpacity>
             </Link>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -259,30 +302,59 @@ const handleSignup = async () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Palette.black,
   },
   scrollContainer: {
     flexGrow: 1,
+    paddingBottom: 40,
+  },
+  hero: {
+    paddingTop: 40,
+    paddingBottom: 32,
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
-  header: {
+  logoContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 40,
-    marginTop: 20,
+    marginBottom: 24,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 8,
+  logo: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
+  logoText: {
+    color: Palette.white,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
-  form: {
-    flex: 1,
+  brandTitle: {
+    color: Palette.white,
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  brandSubtitle: {
+    color: Palette.gray300,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  formCard: {
+    marginTop: -16,
+    marginHorizontal: 16,
+    padding: 20,
+    borderRadius: 24,
+    backgroundColor: Palette.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
   },
   inputContainer: {
     marginBottom: 20,
@@ -290,29 +362,29 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: '#111827',
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#F9FAFB',
   },
   inputError: {
-    borderColor: '#ff3b30',
+    borderColor: '#EF4444',
   },
   errorText: {
-    color: '#ff3b30',
+    color: '#EF4444',
     fontSize: 12,
     marginTop: 4,
   },
   passwordHint: {
     fontSize: 12,
-    color: '#666',
+    color: '#6B7280',
     marginTop: 4,
   },
   termsContainer: {
@@ -330,23 +402,27 @@ const styles = StyleSheet.create({
   termsText: {
     flex: 1,
     fontSize: 14,
-    color: '#666',
+    color: '#6B7280',
     lineHeight: 20,
   },
   termsLink: {
-    color: '#007AFF',
+    color: Palette.orangeDark,
     fontWeight: '500',
   },
   signupButton: {
-    backgroundColor: '#007AFF',
     borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
     marginTop: 10,
     marginBottom: 24,
+    overflow: 'hidden',
+  },
+  signupButtonGradient: {
+    width: '100%',
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.7,
   },
   signupButtonText: {
     color: '#fff',
@@ -361,11 +437,11 @@ const styles = StyleSheet.create({
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#E5E7EB',
   },
   dividerText: {
     marginHorizontal: 16,
-    color: '#666',
+    color: '#9CA3AF',
     fontSize: 14,
   },
   socialButtonsContainer: {
@@ -378,17 +454,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   googleButton: {
-    backgroundColor: '#fff',
-    borderColor: '#ddd',
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
   },
   appleButton: {
-    backgroundColor: '#000',
-    borderColor: '#000',
+    backgroundColor: '#111827',
+    borderColor: '#111827',
   },
   socialButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: '#111827',
   },
   appleButtonText: {
     color: '#fff',
@@ -400,11 +476,11 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   loginText: {
-    color: '#666',
+    color: '#6B7280',
     fontSize: 14,
   },
   loginLink: {
-    color: '#007AFF',
+    color: Palette.orangeDark,
     fontSize: 14,
     fontWeight: '600',
   },

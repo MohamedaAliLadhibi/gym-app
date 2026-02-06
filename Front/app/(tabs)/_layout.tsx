@@ -3,14 +3,15 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Palette } from '../../constants/theme';
 // import { useAuth } from '../../context/AuthContext';
 
 const COLORS = {
-  primary: '#7C3AED',
-  secondary: '#3B82F6',
-  dark: '#0F172A',
-  white: '#FFFFFF',
-  gray: '#64748B',
+  primary: Palette.orange,
+  secondary: Palette.orangeDark,
+  dark: Palette.black,
+  white: Palette.white,
+  gray: Palette.gray500,
 } as const;
 
 export default function TabsLayout() {
